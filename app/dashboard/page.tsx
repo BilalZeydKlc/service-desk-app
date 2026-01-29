@@ -1,12 +1,44 @@
 'use client';
 
+import { useState, useEffect, useCallback } from 'react';
 import { useSession, signOut } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
-import { useEffect } from 'react';
+import Calendar from '@/components/Calendar';
+import TaskModal from '@/components/TaskModal';
+
+interface Task {
+    _id: string;
+    date: string;
+    companyName: string;
+    description: string;
+    isCompleted: boolean;
+}
 
 export default function DashboardPage() {
     const { data: session, status } = useSession();
     const router = useRouter();
+    const [tasks, setTasks] = useState<Task[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [modalOpen, setModalOpen] = useState(false);
+    const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+    const [selectedTasks, setSelectedTasks] = useState<Task[]>([]);
+    const [currentMonth, setCurrentMonth] = useState(new Date());
+
+    const fetchTasks = useCallback(async () => {
+        try {
+            const month = currentMonth.getMonth() + 1;
+            const year = currentMonth.getFullYear();
+            const response = await fetch(`/api/tasks?month=${month}&year=${year}`);
+            const data = await response.json();
+            if (response.ok) {
+                setTasks(data.tasks);
+            }
+        } catch (error) {
+            console.error('Error fetching tasks:', error);
+        } finally {
+            setLoading(false);
+        }
+    }, [currentMonth]);
 
     useEffect(() => {
         if (status === 'unauthenticated') {
@@ -14,7 +46,13 @@ export default function DashboardPage() {
         }
     }, [status, router]);
 
-    if (status === 'loading') {
+    useEffect(() => {
+        if (session) {
+            fetchTasks();
+        }
+    }, [session, fetchTasks]);
+
+    if (status === 'loading' || loading) {
         return (
             <div className="auth-container">
                 <div className="spinner-custom" style={{ width: '40px', height: '40px' }}></div>
@@ -26,10 +64,75 @@ export default function DashboardPage() {
         return null;
     }
 
+    const handleDateSelect = (date: Date, dayTasks: Task[]) => {
+        setSelectedDate(date);
+        setSelectedTasks(dayTasks);
+        setModalOpen(true);
+    };
+
+    const handleTaskCreate = async (taskData: Omit<Task, '_id'>) => {
+        try {
+            const response = await fetch('/api/tasks', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(taskData),
+            });
+
+            if (response.ok) {
+                fetchTasks();
+                // Update selected tasks
+                const data = await response.json();
+                setSelectedTasks(prev => [...prev, data.task]);
+            }
+        } catch (error) {
+            console.error('Error creating task:', error);
+        }
+    };
+
+    const handleTaskUpdate = async (id: string, updates: Partial<Task>) => {
+        try {
+            const response = await fetch(`/api/tasks/${id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(updates),
+            });
+
+            if (response.ok) {
+                fetchTasks();
+                // Update selected tasks
+                setSelectedTasks(prev =>
+                    prev.map(task => task._id === id ? { ...task, ...updates } : task)
+                );
+            }
+        } catch (error) {
+            console.error('Error updating task:', error);
+        }
+    };
+
+    const handleTaskDelete = async (id: string) => {
+        try {
+            const response = await fetch(`/api/tasks/${id}`, {
+                method: 'DELETE',
+            });
+
+            if (response.ok) {
+                fetchTasks();
+                // Update selected tasks
+                setSelectedTasks(prev => prev.filter(task => task._id !== id));
+            }
+        } catch (error) {
+            console.error('Error deleting task:', error);
+        }
+    };
+
     const handleLogout = async () => {
         await signOut({ redirect: false });
         router.push('/');
     };
+
+    const totalTasks = tasks.length;
+    const completedTasks = tasks.filter(t => t.isCompleted).length;
+    const pendingTasks = totalTasks - completedTasks;
 
     return (
         <div className="dashboard-container">
@@ -48,62 +151,51 @@ export default function DashboardPage() {
             <div className="dashboard-content">
                 <div className="container">
                     <div className="row">
-                        <div className="col-12">
+                        <div className="col-lg-8">
+                            <div className="dashboard-card">
+                                <Calendar onDateSelect={handleDateSelect} tasks={tasks} />
+                            </div>
+                        </div>
+
+                        <div className="col-lg-4">
                             <div className="dashboard-card welcome-card">
-                                <h2>Hoş Geldiniz, {session.user?.name?.split(' ')[0]}! 👋</h2>
+                                <h2>Hoş Geldiniz! 👋</h2>
                                 <p className="mb-0 opacity-75">
-                                    Service Desk yönetim panelinize başarıyla giriş yaptınız.
+                                    {session.user?.name?.split(' ')[0]}
                                 </p>
                             </div>
-                        </div>
-                    </div>
 
-                    <div className="row">
-                        <div className="col-md-4">
                             <div className="dashboard-card stat-card">
                                 <div className="icon">📊</div>
-                                <div className="value">0</div>
-                                <div className="label">Açık Talepler</div>
+                                <div className="value">{pendingTasks}</div>
+                                <div className="label">Bekleyen İşler</div>
                             </div>
-                        </div>
-                        <div className="col-md-4">
+
                             <div className="dashboard-card stat-card">
                                 <div className="icon">✅</div>
-                                <div className="value">0</div>
-                                <div className="label">Çözülen Talepler</div>
+                                <div className="value">{completedTasks}</div>
+                                <div className="label">Tamamlanan İşler</div>
                             </div>
-                        </div>
-                        <div className="col-md-4">
-                            <div className="dashboard-card stat-card">
-                                <div className="icon">⏳</div>
-                                <div className="value">0</div>
-                                <div className="label">Bekleyen Talepler</div>
-                            </div>
-                        </div>
-                    </div>
 
-                    <div className="row">
-                        <div className="col-12">
-                            <div className="dashboard-card">
-                                <h5 className="mb-3">Hızlı Bilgiler</h5>
-                                <div className="row">
-                                    <div className="col-md-6">
-                                        <p className="text-secondary mb-2">
-                                            <strong>E-mail:</strong> {session.user?.email}
-                                        </p>
-                                    </div>
-                                    <div className="col-md-6">
-                                        <p className="text-secondary mb-2">
-                                            <strong>Hesap Durumu:</strong>{' '}
-                                            <span className="text-success">Aktif</span>
-                                        </p>
-                                    </div>
-                                </div>
+                            <div className="dashboard-card stat-card">
+                                <div className="icon">📅</div>
+                                <div className="value">{totalTasks}</div>
+                                <div className="label">Toplam İş</div>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
+
+            <TaskModal
+                isOpen={modalOpen}
+                onClose={() => setModalOpen(false)}
+                selectedDate={selectedDate}
+                tasks={selectedTasks}
+                onTaskCreate={handleTaskCreate}
+                onTaskUpdate={handleTaskUpdate}
+                onTaskDelete={handleTaskDelete}
+            />
         </div>
     );
 }

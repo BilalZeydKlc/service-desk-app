@@ -1,0 +1,216 @@
+'use client';
+
+import { useState, useEffect } from 'react';
+
+interface Task {
+    _id: string;
+    date: string;
+    companyName: string;
+    description: string;
+    isCompleted: boolean;
+}
+
+interface TaskModalProps {
+    isOpen: boolean;
+    onClose: () => void;
+    selectedDate: Date | null;
+    tasks: Task[];
+    onTaskCreate: (task: Omit<Task, '_id'>) => void;
+    onTaskUpdate: (id: string, task: Partial<Task>) => void;
+    onTaskDelete: (id: string) => void;
+}
+
+export default function TaskModal({
+    isOpen,
+    onClose,
+    selectedDate,
+    tasks,
+    onTaskCreate,
+    onTaskUpdate,
+    onTaskDelete,
+}: TaskModalProps) {
+    const [isAdding, setIsAdding] = useState(false);
+    const [editingId, setEditingId] = useState<string | null>(null);
+    const [formData, setFormData] = useState({
+        companyName: '',
+        description: '',
+        isCompleted: false,
+    });
+
+    useEffect(() => {
+        if (!isOpen) {
+            setIsAdding(false);
+            setEditingId(null);
+            setFormData({ companyName: '', description: '', isCompleted: false });
+        }
+    }, [isOpen]);
+
+    if (!isOpen || !selectedDate) return null;
+
+    const formatDate = (date: Date) => {
+        const days = ['Pazar', 'Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi'];
+        const months = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran',
+            'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
+        return `${date.getDate()} ${months[date.getMonth()]} ${date.getFullYear()}, ${days[date.getDay()]}`;
+    };
+
+    const handleSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+
+        if (!formData.companyName || !formData.description) return;
+
+        if (editingId) {
+            onTaskUpdate(editingId, formData);
+            setEditingId(null);
+        } else {
+            onTaskCreate({
+                date: selectedDate.toISOString(),
+                ...formData,
+            });
+            setIsAdding(false);
+        }
+
+        setFormData({ companyName: '', description: '', isCompleted: false });
+    };
+
+    const startEdit = (task: Task) => {
+        setEditingId(task._id);
+        setFormData({
+            companyName: task.companyName,
+            description: task.description,
+            isCompleted: task.isCompleted,
+        });
+        setIsAdding(false);
+    };
+
+    const cancelEdit = () => {
+        setEditingId(null);
+        setIsAdding(false);
+        setFormData({ companyName: '', description: '', isCompleted: false });
+    };
+
+    return (
+        <div className="modal-overlay" onClick={onClose}>
+            <div className="modal-content" onClick={e => e.stopPropagation()}>
+                <div className="modal-header">
+                    <h4>{formatDate(selectedDate)}</h4>
+                    <button className="close-btn" onClick={onClose}>×</button>
+                </div>
+
+                <div className="modal-body">
+                    {tasks.length === 0 && !isAdding && (
+                        <p className="no-tasks">Bu gün için kayıtlı iş bulunmuyor.</p>
+                    )}
+
+                    {tasks.map(task => (
+                        <div key={task._id} className={`task-item ${task.isCompleted ? 'completed' : ''}`}>
+                            {editingId === task._id ? (
+                                <form onSubmit={handleSubmit} className="task-form">
+                                    <input
+                                        type="text"
+                                        placeholder="Firma Adı"
+                                        value={formData.companyName}
+                                        onChange={e => setFormData({ ...formData, companyName: e.target.value })}
+                                        className="form-control mb-2"
+                                        required
+                                    />
+                                    <textarea
+                                        placeholder="İş Açıklaması"
+                                        value={formData.description}
+                                        onChange={e => setFormData({ ...formData, description: e.target.value })}
+                                        className="form-control mb-2"
+                                        rows={3}
+                                        required
+                                    />
+                                    <div className="form-check mb-2">
+                                        <input
+                                            type="checkbox"
+                                            id="isCompleted"
+                                            checked={formData.isCompleted}
+                                            onChange={e => setFormData({ ...formData, isCompleted: e.target.checked })}
+                                            className="form-check-input"
+                                        />
+                                        <label htmlFor="isCompleted" className="form-check-label">
+                                            Tamamlandı
+                                        </label>
+                                    </div>
+                                    <div className="form-buttons">
+                                        <button type="submit" className="btn-save">Kaydet</button>
+                                        <button type="button" className="btn-cancel" onClick={cancelEdit}>İptal</button>
+                                    </div>
+                                </form>
+                            ) : (
+                                <>
+                                    <div className="task-info">
+                                        <h5>{task.companyName}</h5>
+                                        <p>{task.description}</p>
+                                        <span className={`status-badge ${task.isCompleted ? 'completed' : 'pending'}`}>
+                                            {task.isCompleted ? '✓ Tamamlandı' : '⏳ Bekliyor'}
+                                        </span>
+                                    </div>
+                                    <div className="task-actions">
+                                        <button
+                                            className="btn-toggle"
+                                            onClick={() => onTaskUpdate(task._id, { isCompleted: !task.isCompleted })}
+                                            title={task.isCompleted ? 'Tamamlanmadı olarak işaretle' : 'Tamamlandı olarak işaretle'}
+                                        >
+                                            {task.isCompleted ? '↩' : '✓'}
+                                        </button>
+                                        <button className="btn-edit" onClick={() => startEdit(task)}>✎</button>
+                                        <button className="btn-delete" onClick={() => onTaskDelete(task._id)}>🗑</button>
+                                    </div>
+                                </>
+                            )}
+                        </div>
+                    ))}
+
+                    {isAdding && (
+                        <form onSubmit={handleSubmit} className="task-form">
+                            <input
+                                type="text"
+                                placeholder="Firma Adı"
+                                value={formData.companyName}
+                                onChange={e => setFormData({ ...formData, companyName: e.target.value })}
+                                className="form-control mb-2"
+                                required
+                                autoFocus
+                            />
+                            <textarea
+                                placeholder="İş Açıklaması"
+                                value={formData.description}
+                                onChange={e => setFormData({ ...formData, description: e.target.value })}
+                                className="form-control mb-2"
+                                rows={3}
+                                required
+                            />
+                            <div className="form-check mb-2">
+                                <input
+                                    type="checkbox"
+                                    id="newIsCompleted"
+                                    checked={formData.isCompleted}
+                                    onChange={e => setFormData({ ...formData, isCompleted: e.target.checked })}
+                                    className="form-check-input"
+                                />
+                                <label htmlFor="newIsCompleted" className="form-check-label">
+                                    Tamamlandı
+                                </label>
+                            </div>
+                            <div className="form-buttons">
+                                <button type="submit" className="btn-save">Ekle</button>
+                                <button type="button" className="btn-cancel" onClick={cancelEdit}>İptal</button>
+                            </div>
+                        </form>
+                    )}
+                </div>
+
+                {!isAdding && !editingId && (
+                    <div className="modal-footer">
+                        <button className="btn-add-task" onClick={() => setIsAdding(true)}>
+                            + Yeni İş Ekle
+                        </button>
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+}
