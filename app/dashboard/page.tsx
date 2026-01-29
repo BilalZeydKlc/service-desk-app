@@ -7,6 +7,7 @@ import Calendar from '@/components/Calendar';
 import TaskModal from '@/components/TaskModal';
 import SearchBox from '@/components/SearchBox';
 import CompaniesModal from '@/components/CompaniesModal';
+import { useTheme } from '@/components/ThemeProvider';
 
 interface Task {
     _id: string;
@@ -19,6 +20,7 @@ interface Task {
 export default function DashboardPage() {
     const { data: session, status } = useSession();
     const router = useRouter();
+    const { theme, toggleTheme } = useTheme();
     const [tasks, setTasks] = useState<Task[]>([]);
     const [loading, setLoading] = useState(true);
     const [modalOpen, setModalOpen] = useState(false);
@@ -166,9 +168,14 @@ export default function DashboardPage() {
             <nav className="dashboard-navbar">
                 <div className="navbar-content">
                     <span className="navbar-brand">Service Desk</span>
-                    <button className="btn-logout" onClick={handleLogout}>
-                        Çıkış
-                    </button>
+                    <div className="navbar-actions">
+                        <button className="btn-theme" onClick={toggleTheme} title={theme === 'dark' ? 'Açık Mod' : 'Koyu Mod'}>
+                            {theme === 'dark' ? '☀️' : '🌙'}
+                        </button>
+                        <button className="btn-logout" onClick={handleLogout}>
+                            Çıkış
+                        </button>
+                    </div>
                 </div>
             </nav>
 
