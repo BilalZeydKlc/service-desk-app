@@ -5,6 +5,7 @@ import { useSession, signOut } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import Calendar from '@/components/Calendar';
 import TaskModal from '@/components/TaskModal';
+import SearchBox from '@/components/SearchBox';
 
 interface Task {
     _id: string;
@@ -67,6 +68,12 @@ export default function DashboardPage() {
     const handleDateSelect = (date: Date, dayTasks: Task[]) => {
         setSelectedDate(date);
         setSelectedTasks(dayTasks);
+        setModalOpen(true);
+    };
+
+    const handleSearchSelect = (task: Task) => {
+        setSelectedDate(new Date(task.date));
+        setSelectedTasks([task]);
         setModalOpen(true);
     };
 
@@ -155,6 +162,8 @@ export default function DashboardPage() {
                         {session.user?.name?.split(' ')[0]}
                     </p>
                 </div>
+
+                <SearchBox onTaskSelect={handleSearchSelect} />
 
                 <div className="stats-grid">
                     <div className="dashboard-card stat-card">
