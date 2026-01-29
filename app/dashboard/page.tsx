@@ -149,41 +149,35 @@ export default function DashboardPage() {
             </nav>
 
             <div className="dashboard-content">
-                <div className="container">
-                    <div className="row">
-                        <div className="col-lg-8">
-                            <div className="dashboard-card">
-                                <Calendar onDateSelect={handleDateSelect} tasks={tasks} />
-                            </div>
-                        </div>
+                <div className="dashboard-card welcome-card">
+                    <h2>Hoş Geldiniz! 👋</h2>
+                    <p className="mb-0 opacity-75">
+                        {session.user?.name?.split(' ')[0]}
+                    </p>
+                </div>
 
-                        <div className="col-lg-4">
-                            <div className="dashboard-card welcome-card">
-                                <h2>Hoş Geldiniz! 👋</h2>
-                                <p className="mb-0 opacity-75">
-                                    {session.user?.name?.split(' ')[0]}
-                                </p>
-                            </div>
-
-                            <div className="dashboard-card stat-card">
-                                <div className="icon">📊</div>
-                                <div className="value">{pendingTasks}</div>
-                                <div className="label">Bekleyen İşler</div>
-                            </div>
-
-                            <div className="dashboard-card stat-card">
-                                <div className="icon">✅</div>
-                                <div className="value">{completedTasks}</div>
-                                <div className="label">Tamamlanan İşler</div>
-                            </div>
-
-                            <div className="dashboard-card stat-card">
-                                <div className="icon">📅</div>
-                                <div className="value">{totalTasks}</div>
-                                <div className="label">Toplam İş</div>
-                            </div>
-                        </div>
+                <div className="stats-grid">
+                    <div className="dashboard-card stat-card">
+                        <div className="icon">📊</div>
+                        <div className="value">{pendingTasks}</div>
+                        <div className="label">Bekleyen</div>
                     </div>
+
+                    <div className="dashboard-card stat-card">
+                        <div className="icon">✅</div>
+                        <div className="value">{completedTasks}</div>
+                        <div className="label">Tamamlanan</div>
+                    </div>
+
+                    <div className="dashboard-card stat-card">
+                        <div className="icon">📅</div>
+                        <div className="value">{totalTasks}</div>
+                        <div className="label">Toplam</div>
+                    </div>
+                </div>
+
+                <div className="dashboard-card">
+                    <Calendar onDateSelect={handleDateSelect} tasks={tasks} />
                 </div>
             </div>
 
