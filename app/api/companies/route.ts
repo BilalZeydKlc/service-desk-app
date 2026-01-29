@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 import dbConnect from '@/lib/mongodb';
 import Task from '@/models/Task';
+import mongoose from 'mongoose';
 
 // GET - Get company statistics (unique companies with visit counts)
 export async function GET(request: NextRequest) {
@@ -15,8 +16,10 @@ export async function GET(request: NextRequest) {
 
         await dbConnect();
 
+        const userId = new mongoose.Types.ObjectId((session.user as any).id);
+
         const companies = await Task.aggregate([
-            { $match: { userId: (session.user as any).id } },
+            { $match: { userId: userId } },
             {
                 $group: {
                     _id: '$companyName',
