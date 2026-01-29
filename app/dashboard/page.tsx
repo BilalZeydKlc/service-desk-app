@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import Calendar from '@/components/Calendar';
 import TaskModal from '@/components/TaskModal';
 import SearchBox from '@/components/SearchBox';
+import CompaniesModal from '@/components/CompaniesModal';
 
 interface Task {
     _id: string;
@@ -21,9 +22,11 @@ export default function DashboardPage() {
     const [tasks, setTasks] = useState<Task[]>([]);
     const [loading, setLoading] = useState(true);
     const [modalOpen, setModalOpen] = useState(false);
+    const [companiesModalOpen, setCompaniesModalOpen] = useState(false);
     const [selectedDate, setSelectedDate] = useState<Date | null>(null);
     const [selectedTasks, setSelectedTasks] = useState<Task[]>([]);
     const [currentMonth, setCurrentMonth] = useState(new Date());
+    const [totalCompanies, setTotalCompanies] = useState(0);
 
     const fetchTasks = useCallback(async () => {
         try {
@@ -41,6 +44,18 @@ export default function DashboardPage() {
         }
     }, [currentMonth]);
 
+    const fetchCompanyCount = useCallback(async () => {
+        try {
+            const response = await fetch('/api/companies');
+            const data = await response.json();
+            if (response.ok) {
+                setTotalCompanies(data.totalCompanies);
+            }
+        } catch (error) {
+            console.error('Error fetching companies:', error);
+        }
+    }, []);
+
     useEffect(() => {
         if (status === 'unauthenticated') {
             router.push('/');
@@ -50,8 +65,9 @@ export default function DashboardPage() {
     useEffect(() => {
         if (session) {
             fetchTasks();
+            fetchCompanyCount();
         }
-    }, [session, fetchTasks]);
+    }, [session, fetchTasks, fetchCompanyCount]);
 
     if (status === 'loading' || loading) {
         return (
@@ -77,6 +93,11 @@ export default function DashboardPage() {
         setModalOpen(true);
     };
 
+    const handleCompanySelect = (companyName: string) => {
+        setCompaniesModalOpen(false);
+        router.push(`/company/${encodeURIComponent(companyName)}`);
+    };
+
     const handleTaskCreate = async (taskData: Omit<Task, '_id'>) => {
         try {
             const response = await fetch('/api/tasks', {
@@ -87,7 +108,7 @@ export default function DashboardPage() {
 
             if (response.ok) {
                 fetchTasks();
-                // Update selected tasks
+                fetchCompanyCount();
                 const data = await response.json();
                 setSelectedTasks(prev => [...prev, data.task]);
             }
@@ -106,7 +127,6 @@ export default function DashboardPage() {
 
             if (response.ok) {
                 fetchTasks();
-                // Update selected tasks
                 setSelectedTasks(prev =>
                     prev.map(task => task._id === id ? { ...task, ...updates } : task)
                 );
@@ -124,7 +144,7 @@ export default function DashboardPage() {
 
             if (response.ok) {
                 fetchTasks();
-                // Update selected tasks
+                fetchCompanyCount();
                 setSelectedTasks(prev => prev.filter(task => task._id !== id));
             }
         } catch (error) {
@@ -144,44 +164,44 @@ export default function DashboardPage() {
     return (
         <div className="dashboard-container">
             <nav className="dashboard-navbar">
-                <div className="container-fluid d-flex justify-content-between align-items-center">
+                <div className="navbar-content">
                     <span className="navbar-brand">Service Desk</span>
-                    <div className="d-flex align-items-center gap-3">
-                        <span className="text-secondary">{session.user?.name}</span>
-                        <button className="btn-logout" onClick={handleLogout}>
-                            Çıkış Yap
-                        </button>
+                    <div className="navbar-search">
+                        <SearchBox onTaskSelect={handleSearchSelect} />
                     </div>
+                    <button className="btn-logout" onClick={handleLogout}>
+                        Çıkış
+                    </button>
                 </div>
             </nav>
 
             <div className="dashboard-content">
-                <div className="dashboard-card welcome-card">
-                    <h2>Hoş Geldiniz! 👋</h2>
-                    <p className="mb-0 opacity-75">
-                        {session.user?.name?.split(' ')[0]}
-                    </p>
-                </div>
-
-                <SearchBox onTaskSelect={handleSearchSelect} />
-
-                <div className="stats-grid">
-                    <div className="dashboard-card stat-card">
-                        <div className="icon">📊</div>
-                        <div className="value">{pendingTasks}</div>
-                        <div className="label">Bekleyen</div>
+                <div className="stats-grid-small">
+                    <div className="dashboard-card stat-card-small">
+                        <div className="stat-icon">⏳</div>
+                        <div className="stat-value">{pendingTasks}</div>
+                        <div className="stat-label">Bekleyen</div>
                     </div>
 
-                    <div className="dashboard-card stat-card">
-                        <div className="icon">✅</div>
-                        <div className="value">{completedTasks}</div>
-                        <div className="label">Tamamlanan</div>
+                    <div className="dashboard-card stat-card-small">
+                        <div className="stat-icon">✅</div>
+                        <div className="stat-value">{completedTasks}</div>
+                        <div className="stat-label">Tamamlanan</div>
                     </div>
 
-                    <div className="dashboard-card stat-card">
-                        <div className="icon">📅</div>
-                        <div className="value">{totalTasks}</div>
-                        <div className="label">Toplam</div>
+                    <div className="dashboard-card stat-card-small">
+                        <div className="stat-icon">📅</div>
+                        <div className="stat-value">{totalTasks}</div>
+                        <div className="stat-label">Toplam</div>
+                    </div>
+
+                    <div
+                        className="dashboard-card stat-card-small clickable"
+                        onClick={() => setCompaniesModalOpen(true)}
+                    >
+                        <div className="stat-icon">🏢</div>
+                        <div className="stat-value">{totalCompanies}</div>
+                        <div className="stat-label">Firma</div>
                     </div>
                 </div>
 
@@ -198,6 +218,12 @@ export default function DashboardPage() {
                 onTaskCreate={handleTaskCreate}
                 onTaskUpdate={handleTaskUpdate}
                 onTaskDelete={handleTaskDelete}
+            />
+
+            <CompaniesModal
+                isOpen={companiesModalOpen}
+                onClose={() => setCompaniesModalOpen(false)}
+                onCompanySelect={handleCompanySelect}
             />
         </div>
     );
