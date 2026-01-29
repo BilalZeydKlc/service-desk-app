@@ -46,8 +46,6 @@ export default function TaskModal({
     const [companies, setCompanies] = useState<Company[]>([]);
     const [filteredCompanies, setFilteredCompanies] = useState<Company[]>([]);
     const [showSuggestions, setShowSuggestions] = useState(false);
-    const [isCompanyInputFocused, setIsCompanyInputFocused] = useState(false);
-    const inputRef = useRef<HTMLInputElement>(null);
     const suggestionsRef = useRef<HTMLDivElement>(null);
 
     // Fetch companies when modal opens
@@ -63,40 +61,8 @@ export default function TaskModal({
             setEditingId(null);
             setFormData({ companyName: '', description: '', isCompleted: false });
             setShowSuggestions(false);
-            setIsCompanyInputFocused(false);
         }
     }, [isOpen]);
-
-    // Filter companies based on input - only show when input is focused
-    useEffect(() => {
-        if (isCompanyInputFocused && formData.companyName.length >= 1) {
-            const filtered = companies.filter(c =>
-                c.companyName.toLowerCase().includes(formData.companyName.toLowerCase())
-            );
-            setFilteredCompanies(filtered);
-            setShowSuggestions(filtered.length > 0);
-        } else {
-            setFilteredCompanies([]);
-            setShowSuggestions(false);
-        }
-    }, [formData.companyName, companies, isCompanyInputFocused]);
-
-    // Close suggestions on outside click
-    useEffect(() => {
-        const handleClickOutside = (event: MouseEvent) => {
-            if (
-                suggestionsRef.current &&
-                !suggestionsRef.current.contains(event.target as Node) &&
-                inputRef.current &&
-                !inputRef.current.contains(event.target as Node)
-            ) {
-                setShowSuggestions(false);
-            }
-        };
-
-        document.addEventListener('mousedown', handleClickOutside);
-        return () => document.removeEventListener('mousedown', handleClickOutside);
-    }, []);
 
     const fetchCompanies = async () => {
         try {
@@ -119,9 +85,24 @@ export default function TaskModal({
         return `${date.getDate()} ${months[date.getMonth()]} ${date.getFullYear()}, ${days[date.getDay()]}`;
     };
 
+    const handleCompanyInputChange = (value: string) => {
+        setFormData({ ...formData, companyName: value });
+        if (value.length >= 1) {
+            const filtered = companies.filter(c =>
+                c.companyName.toLowerCase().includes(value.toLowerCase())
+            );
+            setFilteredCompanies(filtered);
+            setShowSuggestions(filtered.length > 0);
+        } else {
+            setFilteredCompanies([]);
+            setShowSuggestions(false);
+        }
+    };
+
     const handleCompanySelect = (companyName: string) => {
         setFormData({ ...formData, companyName });
         setShowSuggestions(false);
+        setFilteredCompanies([]);
     };
 
     const handleSubmit = (e: React.FormEvent) => {
@@ -161,23 +142,19 @@ export default function TaskModal({
         setShowSuggestions(false);
     };
 
-    const CompanyInput = ({ id }: { id: string }) => (
+    // Inline company input JSX to prevent remounting issues
+    const companyInputJSX = (autoFocusEnabled: boolean) => (
         <div className="company-input-wrapper">
             <input
-                ref={inputRef}
                 type="text"
                 placeholder="Firma Adı"
                 value={formData.companyName}
-                onChange={e => setFormData({ ...formData, companyName: e.target.value })}
-                onFocus={() => setIsCompanyInputFocused(true)}
-                onBlur={() => {
-                    // Delay to allow click on suggestion
-                    setTimeout(() => setIsCompanyInputFocused(false), 200);
-                }}
+                onChange={e => handleCompanyInputChange(e.target.value)}
+                onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
                 className="form-control mb-2"
                 required
                 autoComplete="off"
-                autoFocus={id === 'new'}
+                autoFocus={autoFocusEnabled}
             />
             {showSuggestions && filteredCompanies.length > 0 && (
                 <div className="company-suggestions" ref={suggestionsRef}>
@@ -185,7 +162,10 @@ export default function TaskModal({
                         <div
                             key={company.companyName}
                             className="suggestion-item"
-                            onClick={() => handleCompanySelect(company.companyName)}
+                            onMouseDown={(e) => {
+                                e.preventDefault();
+                                handleCompanySelect(company.companyName);
+                            }}
                         >
                             <span className="suggestion-name">{company.companyName}</span>
                             <span className="suggestion-count">{company.visitCount} ziyaret</span>
@@ -213,7 +193,7 @@ export default function TaskModal({
                         <div key={task._id} className={`task-item ${task.isCompleted ? 'completed' : ''}`}>
                             {editingId === task._id ? (
                                 <form onSubmit={handleSubmit} className="task-form">
-                                    <CompanyInput id="edit" />
+                                    {companyInputJSX(false)}
                                     <textarea
                                         placeholder="İş Açıklaması"
                                         value={formData.description}
@@ -266,7 +246,7 @@ export default function TaskModal({
 
                     {isAdding && (
                         <form onSubmit={handleSubmit} className="task-form">
-                            <CompanyInput id="new" />
+                            {companyInputJSX(true)}
                             <textarea
                                 placeholder="İş Açıklaması"
                                 value={formData.description}
