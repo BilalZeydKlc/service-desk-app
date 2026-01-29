@@ -1365,3 +1365,63 @@ body {
     max-height: 350px;
   }
 }
+
+/* ===== COMPANY AUTOCOMPLETE ===== */
+.company-input-wrapper {
+  position: relative;
+}
+
+.company-suggestions {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: var(--dark-bg);
+  border: 1px solid var(--card-border);
+  border-radius: var(--border-radius);
+  margin-top: -4px;
+  max-height: 200px;
+  overflow-y: auto;
+  z-index: 200;
+  box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.7);
+  -webkit-overflow-scrolling: touch;
+}
+
+.suggestion-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--spacing-md);
+  border-bottom: 1px solid var(--card-border);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  touch-action: manipulation;
+}
+
+.suggestion-item:last-child {
+  border-bottom: none;
+}
+
+.suggestion-item:active {
+  background: rgba(102, 126, 234, 0.2);
+}
+
+.suggestion-name {
+  font-weight: 500;
+  color: var(--text-primary);
+  font-size: 0.95rem;
+}
+
+.suggestion-count {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  background: rgba(102, 126, 234, 0.2);
+  padding: 2px 8px;
+  border-radius: 10px;
+}
+
+@media (min-width: 768px) {
+  .suggestion-item:hover {
+    background: rgba(102, 126, 234, 0.15);
+  }
+}

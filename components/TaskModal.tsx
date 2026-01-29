@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
 interface Task {
     _id: string;
@@ -8,6 +8,11 @@ interface Task {
     companyName: string;
     description: string;
     isCompleted: boolean;
+}
+
+interface Company {
+    companyName: string;
+    visitCount: number;
 }
 
 interface TaskModalProps {
@@ -37,13 +42,71 @@ export default function TaskModal({
         isCompleted: false,
     });
 
+    // Autocomplete state
+    const [companies, setCompanies] = useState<Company[]>([]);
+    const [filteredCompanies, setFilteredCompanies] = useState<Company[]>([]);
+    const [showSuggestions, setShowSuggestions] = useState(false);
+    const inputRef = useRef<HTMLInputElement>(null);
+    const suggestionsRef = useRef<HTMLDivElement>(null);
+
+    // Fetch companies when modal opens
+    useEffect(() => {
+        if (isOpen) {
+            fetchCompanies();
+        }
+    }, [isOpen]);
+
     useEffect(() => {
         if (!isOpen) {
             setIsAdding(false);
             setEditingId(null);
             setFormData({ companyName: '', description: '', isCompleted: false });
+            setShowSuggestions(false);
         }
     }, [isOpen]);
+
+    // Filter companies based on input
+    useEffect(() => {
+        if (formData.companyName.length >= 1) {
+            const filtered = companies.filter(c =>
+                c.companyName.toLowerCase().includes(formData.companyName.toLowerCase())
+            );
+            setFilteredCompanies(filtered);
+            setShowSuggestions(filtered.length > 0);
+        } else {
+            setFilteredCompanies([]);
+            setShowSuggestions(false);
+        }
+    }, [formData.companyName, companies]);
+
+    // Close suggestions on outside click
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (
+                suggestionsRef.current &&
+                !suggestionsRef.current.contains(event.target as Node) &&
+                inputRef.current &&
+                !inputRef.current.contains(event.target as Node)
+            ) {
+                setShowSuggestions(false);
+            }
+        };
+
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
+
+    const fetchCompanies = async () => {
+        try {
+            const response = await fetch('/api/companies');
+            const data = await response.json();
+            if (response.ok) {
+                setCompanies(data.companies);
+            }
+        } catch (error) {
+            console.error('Error fetching companies:', error);
+        }
+    };
 
     if (!isOpen || !selectedDate) return null;
 
@@ -52,6 +115,11 @@ export default function TaskModal({
         const months = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran',
             'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
         return `${date.getDate()} ${months[date.getMonth()]} ${date.getFullYear()}, ${days[date.getDay()]}`;
+    };
+
+    const handleCompanySelect = (companyName: string) => {
+        setFormData({ ...formData, companyName });
+        setShowSuggestions(false);
     };
 
     const handleSubmit = (e: React.FormEvent) => {
@@ -71,6 +139,7 @@ export default function TaskModal({
         }
 
         setFormData({ companyName: '', description: '', isCompleted: false });
+        setShowSuggestions(false);
     };
 
     const startEdit = (task: Task) => {
@@ -87,7 +156,39 @@ export default function TaskModal({
         setEditingId(null);
         setIsAdding(false);
         setFormData({ companyName: '', description: '', isCompleted: false });
+        setShowSuggestions(false);
     };
+
+    const CompanyInput = ({ id }: { id: string }) => (
+        <div className="company-input-wrapper">
+            <input
+                ref={inputRef}
+                type="text"
+                placeholder="Firma Adı"
+                value={formData.companyName}
+                onChange={e => setFormData({ ...formData, companyName: e.target.value })}
+                onFocus={() => formData.companyName.length >= 1 && filteredCompanies.length > 0 && setShowSuggestions(true)}
+                className="form-control mb-2"
+                required
+                autoComplete="off"
+                autoFocus={id === 'new'}
+            />
+            {showSuggestions && filteredCompanies.length > 0 && (
+                <div className="company-suggestions" ref={suggestionsRef}>
+                    {filteredCompanies.map((company) => (
+                        <div
+                            key={company.companyName}
+                            className="suggestion-item"
+                            onClick={() => handleCompanySelect(company.companyName)}
+                        >
+                            <span className="suggestion-name">{company.companyName}</span>
+                            <span className="suggestion-count">{company.visitCount} ziyaret</span>
+                        </div>
+                    ))}
+                </div>
+            )}
+        </div>
+    );
 
     return (
         <div className="modal-overlay" onClick={onClose}>
@@ -106,14 +207,7 @@ export default function TaskModal({
                         <div key={task._id} className={`task-item ${task.isCompleted ? 'completed' : ''}`}>
                             {editingId === task._id ? (
                                 <form onSubmit={handleSubmit} className="task-form">
-                                    <input
-                                        type="text"
-                                        placeholder="Firma Adı"
-                                        value={formData.companyName}
-                                        onChange={e => setFormData({ ...formData, companyName: e.target.value })}
-                                        className="form-control mb-2"
-                                        required
-                                    />
+                                    <CompanyInput id="edit" />
                                     <textarea
                                         placeholder="İş Açıklaması"
                                         value={formData.description}
@@ -166,15 +260,7 @@ export default function TaskModal({
 
                     {isAdding && (
                         <form onSubmit={handleSubmit} className="task-form">
-                            <input
-                                type="text"
-                                placeholder="Firma Adı"
-                                value={formData.companyName}
-                                onChange={e => setFormData({ ...formData, companyName: e.target.value })}
-                                className="form-control mb-2"
-                                required
-                                autoFocus
-                            />
+                            <CompanyInput id="new" />
                             <textarea
                                 placeholder="İş Açıklaması"
                                 value={formData.description}
