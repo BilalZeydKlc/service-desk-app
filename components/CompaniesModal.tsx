@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 
 interface Company {
     companyName: string;
@@ -17,10 +17,12 @@ interface CompaniesModalProps {
 export default function CompaniesModal({ isOpen, onClose, onCompanySelect }: CompaniesModalProps) {
     const [companies, setCompanies] = useState<Company[]>([]);
     const [loading, setLoading] = useState(true);
+    const [searchQuery, setSearchQuery] = useState('');
 
     useEffect(() => {
         if (isOpen) {
             fetchCompanies();
+            setSearchQuery('');
         }
     }, [isOpen]);
 
@@ -39,6 +41,13 @@ export default function CompaniesModal({ isOpen, onClose, onCompanySelect }: Com
         }
     };
 
+    const filteredCompanies = useMemo(() => {
+        if (!searchQuery.trim()) return companies;
+        return companies.filter(c =>
+            c.companyName.toLowerCase().includes(searchQuery.toLowerCase())
+        );
+    }, [companies, searchQuery]);
+
     if (!isOpen) return null;
 
     return (
@@ -49,16 +58,29 @@ export default function CompaniesModal({ isOpen, onClose, onCompanySelect }: Com
                     <button className="close-btn" onClick={onClose}>×</button>
                 </div>
 
+                <div className="modal-search">
+                    <input
+                        type="text"
+                        placeholder="Firma ara..."
+                        value={searchQuery}
+                        onChange={e => setSearchQuery(e.target.value)}
+                        className="search-input"
+                        autoComplete="off"
+                    />
+                </div>
+
                 <div className="modal-body">
                     {loading ? (
                         <div className="loading-state">
                             <div className="spinner-custom"></div>
                         </div>
-                    ) : companies.length === 0 ? (
-                        <p className="no-tasks">Henüz kayıtlı firma bulunmuyor.</p>
+                    ) : filteredCompanies.length === 0 ? (
+                        <p className="no-tasks">
+                            {searchQuery ? 'Firma bulunamadı.' : 'Henüz kayıtlı firma bulunmuyor.'}
+                        </p>
                     ) : (
                         <div className="companies-list">
-                            {companies.map((company) => (
+                            {filteredCompanies.map((company) => (
                                 <div
                                     key={company.companyName}
                                     className="company-item"
