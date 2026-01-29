@@ -46,6 +46,7 @@ export default function TaskModal({
     const [companies, setCompanies] = useState<Company[]>([]);
     const [filteredCompanies, setFilteredCompanies] = useState<Company[]>([]);
     const [showSuggestions, setShowSuggestions] = useState(false);
+    const [isCompanyInputFocused, setIsCompanyInputFocused] = useState(false);
     const inputRef = useRef<HTMLInputElement>(null);
     const suggestionsRef = useRef<HTMLDivElement>(null);
 
@@ -62,12 +63,13 @@ export default function TaskModal({
             setEditingId(null);
             setFormData({ companyName: '', description: '', isCompleted: false });
             setShowSuggestions(false);
+            setIsCompanyInputFocused(false);
         }
     }, [isOpen]);
 
-    // Filter companies based on input
+    // Filter companies based on input - only show when input is focused
     useEffect(() => {
-        if (formData.companyName.length >= 1) {
+        if (isCompanyInputFocused && formData.companyName.length >= 1) {
             const filtered = companies.filter(c =>
                 c.companyName.toLowerCase().includes(formData.companyName.toLowerCase())
             );
@@ -77,7 +79,7 @@ export default function TaskModal({
             setFilteredCompanies([]);
             setShowSuggestions(false);
         }
-    }, [formData.companyName, companies]);
+    }, [formData.companyName, companies, isCompanyInputFocused]);
 
     // Close suggestions on outside click
     useEffect(() => {
@@ -167,7 +169,11 @@ export default function TaskModal({
                 placeholder="Firma Adı"
                 value={formData.companyName}
                 onChange={e => setFormData({ ...formData, companyName: e.target.value })}
-                onFocus={() => formData.companyName.length >= 1 && filteredCompanies.length > 0 && setShowSuggestions(true)}
+                onFocus={() => setIsCompanyInputFocused(true)}
+                onBlur={() => {
+                    // Delay to allow click on suggestion
+                    setTimeout(() => setIsCompanyInputFocused(false), 200);
+                }}
                 className="form-control mb-2"
                 required
                 autoComplete="off"
