@@ -166,9 +166,6 @@ export default function DashboardPage() {
             <nav className="dashboard-navbar">
                 <div className="navbar-content">
                     <span className="navbar-brand">Service Desk</span>
-                    <div className="navbar-search">
-                        <SearchBox onTaskSelect={handleSearchSelect} />
-                    </div>
                     <button className="btn-logout" onClick={handleLogout}>
                         Çıkış
                     </button>
@@ -176,6 +173,8 @@ export default function DashboardPage() {
             </nav>
 
             <div className="dashboard-content">
+                <SearchBox onTaskSelect={handleSearchSelect} />
+
                 <div className="stats-grid-small">
                     <div className="dashboard-card stat-card-small">
                         <div className="stat-icon">⏳</div>
