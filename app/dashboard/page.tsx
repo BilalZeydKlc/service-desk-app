@@ -27,14 +27,11 @@ export default function DashboardPage() {
     const [companiesModalOpen, setCompaniesModalOpen] = useState(false);
     const [selectedDate, setSelectedDate] = useState<Date | null>(null);
     const [selectedTasks, setSelectedTasks] = useState<Task[]>([]);
-    const [currentMonth, setCurrentMonth] = useState(new Date());
     const [totalCompanies, setTotalCompanies] = useState(0);
 
     const fetchTasks = useCallback(async () => {
         try {
-            const month = currentMonth.getMonth() + 1;
-            const year = currentMonth.getFullYear();
-            const response = await fetch(`/api/tasks?month=${month}&year=${year}`);
+            const response = await fetch('/api/tasks');
             const data = await response.json();
             if (response.ok) {
                 setTasks(data.tasks);
@@ -44,7 +41,7 @@ export default function DashboardPage() {
         } finally {
             setLoading(false);
         }
-    }, [currentMonth]);
+    }, []);
 
     const fetchCompanyCount = useCallback(async () => {
         try {

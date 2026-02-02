@@ -12,10 +12,11 @@ interface Task {
 
 interface CalendarProps {
     onDateSelect: (date: Date, tasks: Task[]) => void;
+    onMonthChange?: (date: Date) => void;
     tasks: Task[];
 }
 
-export default function Calendar({ onDateSelect, tasks }: CalendarProps) {
+export default function Calendar({ onDateSelect, onMonthChange, tasks }: CalendarProps) {
     const [currentDate, setCurrentDate] = useState(new Date());
 
     const monthNames = [
@@ -42,11 +43,15 @@ export default function Calendar({ onDateSelect, tasks }: CalendarProps) {
     const { daysInMonth, startingDay } = getDaysInMonth(currentDate);
 
     const prevMonth = () => {
-        setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1));
+        const newDate = new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1);
+        setCurrentDate(newDate);
+        onMonthChange?.(newDate);
     };
 
     const nextMonth = () => {
-        setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1));
+        const newDate = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1);
+        setCurrentDate(newDate);
+        onMonthChange?.(newDate);
     };
 
     const getTasksForDay = (day: number) => {
