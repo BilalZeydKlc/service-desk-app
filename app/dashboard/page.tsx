@@ -166,6 +166,16 @@ export default function DashboardPage() {
                 <div className="navbar-content">
                     <span className="navbar-brand">Service Desk</span>
                     <div className="navbar-actions">
+                        {(session?.user as any)?.role === 'admin' && (
+                            <button
+                                className="btn-theme"
+                                onClick={() => router.push('/admin')}
+                                title="Admin Panel"
+                                style={{ fontSize: '14px', padding: '6px 12px' }}
+                            >
+                                🛡️ Admin
+                            </button>
+                        )}
                         <button className="btn-theme" onClick={toggleTheme} title={theme === 'dark' ? 'Açık Mod' : 'Koyu Mod'}>
                             {theme === 'dark' ? '☀️' : '🌙'}
                         </button>

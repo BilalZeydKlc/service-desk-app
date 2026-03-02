@@ -61,12 +61,17 @@ export async function POST(request: NextRequest) {
         // Hash password
         const hashedPassword = await bcrypt.hash(password, 12);
 
+        // Determine role based on admin email
+        const adminEmail = process.env.ADMIN_EMAIL?.toLowerCase();
+        const userRole = email.toLowerCase().trim() === adminEmail ? 'admin' : 'user';
+
         // Create user
         const user = await User.create({
             firstName: firstName.trim(),
             lastName: lastName.trim(),
             email: email.toLowerCase().trim(),
             password: hashedPassword,
+            role: userRole,
         });
 
         return NextResponse.json(
